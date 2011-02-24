@@ -7,6 +7,9 @@
 #include <sndfile.h>
 #include "resample.h"
 
+#define BUF_SIZE 1024
+
+
 int
 main(int argc, char **argv)
 {
@@ -36,12 +39,19 @@ main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
 
+        sf_count_t samples_written = 0;
         sf_count_t samples_read = 0;
+        short *inbuf = calloc(BUF_SIZE, sizeof(short));
+        short *outbuf = calloc(BUF_SIZE, sizeof(short));
 
         do {
-
+            samples_read = sf_read_short(ifp, inbuf, BUF_SIZE);
+            resample(inbuf, NULL, if_info->samplerate, outbuf, NULL, out_srate, samples_read, 1);
+            samples_written = sf_write_short(ofp, outbuf, samples_read);
         } while (samples_read > 0);
 
+        free(inbuf);
+        free(outbuf);
         sf_close(ifp);
         sf_close(ofp);
     }
