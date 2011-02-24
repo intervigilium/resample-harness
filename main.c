@@ -14,8 +14,9 @@ main(int argc, char **argv)
     SF_INFO *if_info, *of_info;
 
     if (argc != 3) {
-        printf("usage: resample <input> <output>\n");
+        printf("usage: resample <input> <output> <output sample rate>\n");
     } else {
+        int out_srate = atoi(argv[3]);
         if_info = calloc(1, sizeof(SF_INFO));
 
         ifp = sf_open(argv[1], SFM_READ, if_info);
@@ -25,7 +26,7 @@ main(int argc, char **argv)
         }
 
         of_info = calloc(1, sizeof(SF_INFO));
-        of_info->samplerate = if_info->samplerate;
+        of_info->samplerate = out_srate;
         of_info->channels = if_info->channels;
         of_info->format = if_info->format;
 
