@@ -3,16 +3,17 @@
 CC=gcc
 CFLAGS=-Wall -O2
 SOURCES=resample.c
-OBJECTS=$(SOURCES:.c=.o)
+LIBS=-lsndfile
+OBJECTS=${SOURCES:.c=.o}
 EXECUTABLE=resample
 
-all: $(SOURCES) $(EXECUTABLE)
+all: ${SOURCES} ${EXECUTABLE}
     
-$(EXECUTABLE): $(OBJECTS) 
-	$(CC) main.c $(OBJECTS) -o $@
+${EXECUTABLE}: ${OBJECTS}
+	${CC} ${CFLAGS} ${LIBS} main.c ${OBJECTS} -o $@
 
 .c.o:
-	$(CC) $(CFLAGS) -c $< -o $@
+	${CC} ${CFLAGS} ${LIBS} -c $< -o $@
 
 
 clean:
