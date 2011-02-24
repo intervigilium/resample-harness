@@ -16,8 +16,8 @@ main(int argc, char **argv)
     SNDFILE *ifp, *ofp;
     SF_INFO *if_info, *of_info;
 
-    if (argc != 3) {
-        printf("usage: resample <input> <output> <output sample rate>\n");
+    if (argc != 4) {
+        printf("usage: resample <input file> <output file> <output sample rate>\n");
     } else {
         int out_srate = atoi(argv[3]);
         if_info = calloc(1, sizeof(SF_INFO));
