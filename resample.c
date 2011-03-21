@@ -89,6 +89,7 @@ struct rs_data *resample_init(int in_rate, int out_rate, int channels)
 	data->channels = channels;
 	data->out_count = 0;
 	data->x_off = 10;
+	data->x_num = IBUFFSIZE - 2 * data->x_off;
 	data->x_ptr = data->x_off;
 	data->x_read = data->x_off;
 	data->time = (data->x_off << Np);
@@ -117,10 +118,86 @@ struct rs_data *resample_init(int in_rate, int out_rate, int channels)
 int
 resample(struct rs_data *data, short *in_left, short *in_right, int num_samples)
 {
+	int i, in_buffer_idx, last, buf_max;
+	unsigned int time2;
+	unsigned int out_samples;	/* number of output samples to compute */
+	unsigned short num_out, creep;
+
 	if (!data) {
 		return -1;
 	}
 
+	last = 0;
+	in_buffer_idx = 0;
+	out_samples = (unsigned int)(factor * (double)num_samples + 0.5);
+	do {
+		/* read in_left/right to data->in_left/right */
+		if (!last) {
+			if (IBUFFSIZE > num_samples - in_buffer_idx) {
+				buf_max = num_samples - in_buffer_idx;
+				last =
+				    (num_samples - (framecount - inCount)) - 1 +
+				    data->x_read;
+			} else {
+				buf_max = IBUFFSIZE;
+				last = 0;
+			}
+			for (i = 0; i < buf_max; i++) {
+				data->in_left[i + data->x_off] =
+				    in_left[in_buffer_idx];
+				if (data->channels == 2) {
+					data->in_right[i + data->x_off] =
+					    in_right[in_buffer_idx];
+				}
+				in_buffer_idx++;
+			}
+
+			if (last && (last - data->x_off < data->x_num)) {
+				data->x_num = last - data->x_off;
+				if (data->x_num <= 0) {
+					break;
+				}
+			}
+		}
+
+		num_out =
+		    SrcLinear(data->in_left, data->out_left, data->factor,
+			      data->time, data->x_num);
+		if (data->channels == 2) {
+			time2 = data->time;
+			num_out =
+			    SrcLinear(data->in_right, data->out_right,
+				      data->factor, data->time2, data->x_num);
+		}
+
+		data->time -= (data->x_num << Np);
+		data->x_ptr += data->x_num;
+		creep = (data->time >> Np) - data->x_off;
+		if (creep) {
+			data->time -= (creep << Np);
+			data->x_ptr += creep;
+		}
+		for (i = 0; i < IBUFFSIZE - data->x_ptr + data->x_off; i++) {
+			data->in_left[i] =
+			    data->in_left[i + data->x_ptr - data->x_off];
+			if (data->channels == 2) {
+				data->in_right[i] =
+				    data->in_right[i + data->x_ptr -
+						   data->x_off];
+			}
+		}
+		data->x_read = i;
+		data->x_ptr = data->x_off;
+		data->out_count += num_out;
+		if (data->out_count > out_samples) {
+			num_out -= (data->out_count - out_samples);
+			data->out_count = out_samples;
+		}
+
+		/* resampled data sits in data->out_left, data->out_right already */
+	} while (data->out_count < out_samples);
+
+	return data->out_count;
 }
 
 void resample_close(struct rs_data *data)

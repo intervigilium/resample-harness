@@ -50,11 +50,12 @@ struct rs_data {
 	double factor;
 	int channels;
 	unsigned int time;
-	unsigned int x_ptr;
-	unsigned int x_read;
-	unsigned int x_off;
-	unsigned int out_count;
-	int out_size;
+	unsigned short x_ptr;
+	unsigned short x_read;
+	unsigned short x_off;
+	unsigned short x_num;
+	unsigned int out_count;	/* number of output samples written */
+	unsigned int out_size;	/* output buffer size */
 	short *in_left;
 	short *in_right;
 	short *out_left;
