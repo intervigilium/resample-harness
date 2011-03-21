@@ -49,13 +49,19 @@
 struct rs_data {
 	double factor;
 	int channels;
-	short *out_right;
+	unsigned int time;
+	unsigned int x_ptr;
+	unsigned int x_read;
+	unsigned int x_off;
+	unsigned int out_count;
+	int out_size;
+	short *in_left;
+	short *in_right;
+	short *out_left;
 	short *out_right;
 };
 
 struct rs_data *resample_init(int in_rate, int out_rate, int channels);
-
-void resample_set_buffers(short *out_left, short *out_right);
 
 int resample(struct rs_data *data, short *in_left, short *in_right,
 	     int num_samples);

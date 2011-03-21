@@ -75,16 +75,62 @@ static int SrcLinear(short X[], short Y[], double factor, unsigned int *Time,
 
 struct rs_data *resample_init(int in_rate, int out_rate, int channels)
 {
+	struct rs_data *data;
 
+	data = (struct rs_data *)calloc(sizeof(struct rs_data), 1);
+	if (!data) {
+		return NULL;
+	}
+	if (out_rate <= 0 || in_rate <= 0) {
+		return NULL;
+	}
+
+	data->factor = out_rate / (double)in_rate;
+	data->channels = channels;
+	data->out_count = 0;
+	data->x_off = 10;
+	data->x_ptr = data->x_off;
+	data->x_read = data->x_off;
+	data->time = (data->x_off << Np);
+
+	data->out_size = (int)(((double)(IBUFFSIZE)) * data->factor + 2.0);
+	data->in_left = (short *)calloc(sizeof(short), IBUFFSIZE);
+	data->out_left = (short *)calloc(sizeof(short), data->out_size);
+	if (!data->in_left || !data->out_left) {
+		resample_close(data);
+		return NULL;
+	}
+	memset(data->in_left, 0, sizeof(short) * data->x_off);
+	if (channels == 2) {
+		data->in_right = (short *)calloc(sizeof(short), IBUFFSIZE);
+		data->out_right =
+		    (short *)calloc(sizeof(short), data->out_size);
+		if (!data->in_right || !data->out_right) {
+			resample_close(data);
+			return NULL;
+		}
+		memset(data->in_right, 0, sizeof(short) * data->x_off);
+	}
+	return data;
 }
 
 int
 resample(struct rs_data *data, short *in_left, short *in_right, int num_samples)
 {
+	if (!data) {
+		return -1;
+	}
 
 }
 
 void resample_close(struct rs_data *data)
 {
-
+	if (data) {
+		free(data->in_left);
+		free(data->in_right);
+		free(data->out_right);
+		free(data->out_left);
+		free(data);
+		data = NULL;
+	}
 }
