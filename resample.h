@@ -47,13 +47,21 @@
 #define MIN_HWORD (-32768)
 
 
-int resample(
-    short *inputL,
-    short *inputR,
-    int inputRate,
-    short *outputL,
-    short *outputR,
-    int outputRate,
-    int numSamples,
-    int nChans
-);
+struct rs_data {
+    double factor;
+    int channels;
+    short *out_right;
+    short *out_right;
+};
+
+
+struct rs_data * resample_init(int in_rate, int out_rate, int channels);
+
+
+void resample_set_buffers(short *out_left, short *out_right);
+
+
+int resample(struct rs_data *data, short *in_left, short *in_right, int num_samples);
+
+
+void resample_close(struct rs_data *data);

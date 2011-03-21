@@ -77,132 +77,22 @@ static int SrcLinear(short X[], short Y[], double factor, unsigned int *Time,
 }
 
 
-static int readDataBuffers(
-    short *inputL,
-    short *inputR,
-    int inCount,
-    short *outPtr1,
-    short *outPtr2,
-    int dataArraySize,
-    unsigned int *framecount,
-    int nChans,
-    int Xoff)
+struct rs_data *
+resample_init(int in_rate, int out_rate, int channels)
 {
-    int Nsamps;
 
-    Nsamps = dataArraySize - Xoff;
-    outPtr1 += Xoff;
-    outPtr2 += Xoff;
-
-    if (nChans == 1) {
-        memcpy(outPtr1, inputL, sizeof(short) * (Nsamps - 1));
-    } else {
-        memcpy(outPtr1, inputL, sizeof(short) * (Nsamps - 1));
-        memcpy(outPtr2, inputR, sizeof(short) * (Nsamps - 1));
-    }
-
-    *framecount += Nsamps;
-
-    if (*framecount >= (unsigned) inCount) {
-        return (((Nsamps - (*framecount - inCount)) - 1) + Xoff);
-    } else {
-        return 0;
-    }
 }
 
 
-int resample(
-    short *inputL,
-    short *inputR,
-    int inputRate,
-    short *outputL,
-    short *outputR,
-    int outputRate,
-    int numSamples,
-    int nChans)
+int
+resample(struct rs_data *data, short *in_left, short *in_right, int num_samples)
 {
-    unsigned int Time, Time2;
-    unsigned short Xp, Ncreep, Xoff, Xread;
-    double factor = outputRate/(double)inputRate;
-    int OBUFFSIZE = (int)(((double)IBUFFSIZE)*factor+2.0);
-    short X1[IBUFFSIZE], X2[IBUFFSIZE];
-    short Y1[OBUFFSIZE], Y2[OBUFFSIZE];
-    unsigned short Nout, Nx;
-    int i, Ycount, last;
-    unsigned int framecount;
-    unsigned int outIdx;
 
-    framecount = 0;
-    outIdx = 0;
-    Xoff = 10;
-    Nx = IBUFFSIZE - 2*Xoff;
-    last = 0;
-    Ycount = 0;
-    Xp = Xoff;
-    Xread = Xoff;
-    Time = (Xoff<<Np);
+}
 
-    memset(X1, 0, sizeof(short)*Xoff);
-    memset(X2, 0, sizeof(short)*Xoff);
 
-    do {
-        if (!last) {
-            last = readDataBuffers(inputL, inputR, numSamples, X1, X2, IBUFFSIZE,
-                                   &framecount, nChans, (int)Xread);
-            if (last && (last-Xoff<Nx)) {
-                Nx = last-Xoff;
-                if (Nx <= 0) {
-                    break;
-                }
-            }
-        }
+void
+resample_close(struct rs_data *data)
+{
 
-        Time2 = Time;
-        Nout = SrcLinear(X1,Y1,factor,&Time,Nx);
-        if (nChans==2) {
-            Nout = SrcLinear(X2,Y2,factor,&Time2,Nx);
-        }
-
-        Time -= (Nx<<Np);
-        Xp += Nx;
-        Ncreep = (Time>>Np) - Xoff;
-        if (Ncreep) {
-            Time -= (Ncreep<<Np);
-            Xp += Ncreep;
-        }
-        for (i=0; i<IBUFFSIZE-Xp+Xoff; i++) {
-            X1[i] = X1[i+Xp-Xoff];
-            if (nChans==2) {
-                X2[i] = X2[i+Xp-Xoff];
-            }
-        }
-        if (last) {
-            last -= Xp;
-            if (!last) {
-                last++;
-            }
-        }
-        Xread = i;
-        Xp = Xoff;
-
-        Ycount += Nout;
-        if (Ycount>numSamples) {
-            Nout -= (Ycount-numSamples);
-            Ycount = numSamples;
-        }
-
-        if (nChans==1) {
-            for (i=outIdx; i<Nout+outIdx; i++) {
-                outputL[i] = Y1[i];
-            }
-        } else {
-            for (i=outIdx; i<Nout+outIdx; i++) {
-                outputL[i] = Y1[i];
-                outputR[i] = Y2[i];
-            }
-        }
-
-    } while (Ycount<numSamples);
-
-    return(Ycount);
 }
