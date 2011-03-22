@@ -46,25 +46,29 @@
 #define MAX_HWORD (32767)
 #define MIN_HWORD (-32768)
 
+#ifndef MAX
+#define MAX(x,y) ((x)>(y) ?(x):(y))
+#endif
+#ifndef MIN
+#define MIN(x,y) ((x)<(y) ?(x):(y))
+#endif
+
 struct rs_data {
 	double factor;
-	int channels;
 	unsigned int time;
-	unsigned short x_ptr;
-	unsigned short x_read;
-	unsigned short x_off;
-	unsigned short x_num;
-	unsigned int out_count;	/* number of output samples written */
-	unsigned int out_size;	/* output buffer size */
-	short *in_left;
-	short *in_right;
-	short *out_left;
-	short *out_right;
+	int in_buf_ptr;
+	int out_buf_ptr;
+	int in_buf_read;
+	int in_buf_offset;
+	int in_buf_used;
+	int in_buf_size;
+	int out_buf_size;
+	short *in_buf;
+	short *out_buf;
 };
 
-struct rs_data *resample_init(int in_rate, int out_rate, int channels);
+struct rs_data *resample_init(int in_rate, int out_rate);
 
-int resample(struct rs_data *data, short *in_left, short *in_right,
-	     int num_samples);
+int resample(struct rs_data *data, short *in_buf, int num_samples);
 
 void resample_close(struct rs_data *data);
