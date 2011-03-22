@@ -86,7 +86,6 @@ struct rs_data *resample_init(int in_rate, int out_rate)
 	}
 
 	rs->factor = out_rate / (double)in_rate;
-	rs->channels = channels;
 	rs->in_buf_offset = 10;
 	rs->in_buf_ptr = rs->in_buf_offset;
 	rs->in_buf_read = rs->in_buf_offset;
@@ -108,8 +107,8 @@ struct rs_data *resample_init(int in_rate, int out_rate)
 }
 
 int
-resample(struct rs_data *data, short *in_buf, int in_buf_size, short *out_buf,
-	 int out_buf_size)
+resample(struct rs_data *rs, short *in_buf, int in_buf_size, short *out_buf,
+	 int out_buf_size, int last)
 {
 	int i, len;
 	int num_in, num_out, num_creep, num_reuse;
@@ -174,7 +173,7 @@ resample(struct rs_data *data, short *in_buf, int in_buf_size, short *out_buf,
 		rs->in_buf_ptr += num_in;
 
 		/* remove time accumulation */
-		num_creep = (int)(rs->time) - rs->x_off;
+		num_creep = (int)(rs->time) - rs->in_buf_offset;
 		if (num_creep) {
 			rs->time -= num_creep;
 			rs->in_buf_ptr += num_creep;
