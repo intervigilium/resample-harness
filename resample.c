@@ -75,37 +75,36 @@ static int SrcLinear(short X[], short Y[], double factor, unsigned int *Time,
 
 struct rs_data *resample_init(int in_rate, int out_rate)
 {
-	struct rs_data *data;
+	struct rs_data *rs;
 
-	data = (struct rs_data *)calloc(sizeof(struct rs_data), 1);
-	if (!data) {
+	rs = (struct rs_data *)calloc(sizeof(struct rs_data), 1);
+	if (!rs) {
 		return NULL;
 	}
 	if (out_rate <= 0 || in_rate <= 0) {
 		return NULL;
 	}
 
-	data->factor = out_rate / (double)in_rate;
-	data->channels = channels;
-	data->in_buf_offset = 10;
-	data->in_buf_ptr = data->in_buf_offset;
-	data->in_buf_read = data->in_buf_offset;
-	data->time = (data->in_buf_offset << Np);
+	rs->factor = out_rate / (double)in_rate;
+	rs->channels = channels;
+	rs->in_buf_offset = 10;
+	rs->in_buf_ptr = rs->in_buf_offset;
+	rs->in_buf_read = rs->in_buf_offset;
+	rs->time = (rs->in_buf_offset << Np);
 
-	data->in_buf_size = IBUFFSIZE;
-	data->out_buf_size =
-	    (int)(((double)(data->in_buf_size)) * data->factor + 2.0);
+	rs->in_buf_size = IBUFFSIZE;
+	rs->out_buf_size =
+	    (int)(((double)(rs->in_buf_size)) * rs->factor + 2.0);
 
-	data->in_buf =
-	    (short *)calloc(sizeof(short),
-			    data->in_buf_size + data->in_buf_offset);
-	data->out_buf = (short *)calloc(sizeof(short), data->out_buf_size);
-	if (!data->in_buf || !data->out_buf) {
-		resample_close(data);
+	rs->in_buf =
+	    (short *)calloc(sizeof(short), rs->in_buf_size + rs->in_buf_offset);
+	rs->out_buf = (short *)calloc(sizeof(short), rs->out_buf_size);
+	if (!rs->in_buf || !rs->out_buf) {
+		resample_close(rs);
 		return NULL;
 	}
-	memset(data->in_buf, 0, sizeof(short) * data->in_buf_offset);
-	return data;
+	memset(rs->in_buf, 0, sizeof(short) * rs->in_buf_offset);
+	return rs;
 }
 
 int
@@ -116,23 +115,23 @@ resample(struct rs_data *data, short *in_buf, int in_buf_size, short *out_buf,
 	int num_in, num_out, num_creep, num_reuse;
 	int out_total_samples;
 
-	if (!data) {
+	if (!rs) {
 		return -1;
 	}
 
-	data->in_buf_used = 0;
+	rs->in_buf_used = 0;
 	out_total_samples = 0;
 
-	if (data->out_buf_ptr && (out_buf_size - out_total_samples > 0)) {
-		len = MIN(out_buf_size - out_total_samples, data->out_buf_ptr);
+	if (rs->out_buf_ptr && (out_buf_size - out_total_samples > 0)) {
+		len = MIN(out_buf_size - out_total_samples, rs->out_buf_ptr);
 		/* copy leftover samples to the output */
 		for (i = 0; i < len; i++) {
-			out_buf[out_total_samples + i] = data->out_buf[i];
+			out_buf[out_total_samples + i] = rs->out_buf[i];
 		}
 		out_total_samples += len;
 		/* shift remaining samples in output buffer to beginning */
-		for (i = 0; i < data->out_buf_ptr - len; i++) {
-			data->out_buf[i] = data->out_buf[len + i];
+		for (i = 0; i < rs->out_buf_ptr - len; i++) {
+			rs->out_buf[i] = rs->out_buf[len + i];
 		}
 
 		return out_total_samples;
@@ -140,25 +139,25 @@ resample(struct rs_data *data, short *in_buf, int in_buf_size, short *out_buf,
 
 	for (;;) {
 		/* grab input samples from buffer */
-		len = data->in_buf_size - data->in_buf_read;
-		if (len >= in_buf_size - data->in_buf_used) {
-			len = in_buf_size - data->in_buf_used;
+		len = rs->in_buf_size - rs->in_buf_read;
+		if (len >= in_buf_size - rs->in_buf_used) {
+			len = in_buf_size - rs->in_buf_used;
 		}
 		for (i = 0; i < len; i++) {
-			data->in_buf[data->in_buf_read + i] =
-			    in_buf[data->in_buf_used + i];
+			rs->in_buf[rs->in_buf_read + i] =
+			    in_buf[rs->in_buf_used + i];
 		}
-		data->in_buf_used += len;
-		data->in_buf_read += len;
+		rs->in_buf_used += len;
+		rs->in_buf_read += len;
 
-		if (last && (data->in_buf_used == in_buf_size)) {
+		if (last && (rs->in_buf_used == in_buf_size)) {
 			/* pad buffer with zero if no more data */
-			num_in = data->in_buf_read - data->in_buf_offset;
-			for (i = 0; i < data->in_buf_offset; i++) {
-				data->in_buf[data->in_buf_read + i] = 0;
+			num_in = rs->in_buf_read - rs->in_buf_offset;
+			for (i = 0; i < rs->in_buf_offset; i++) {
+				rs->in_buf[rs->in_buf_read + i] = 0;
 			}
 		} else {
-			num_in = data->in_buf_read - 2 * data->in_buf_offset;
+			num_in = rs->in_buf_read - 2 * rs->in_buf_offset;
 		}
 
 		if (num_in <= 0) {
@@ -167,51 +166,48 @@ resample(struct rs_data *data, short *in_buf, int in_buf_size, short *out_buf,
 
 		/* do linear interpolation */
 		num_out =
-		    SrcLinear(data->in_buf, data->out_buf, data->factor,
-			      &data->time, (unsigned short)num_in);
+		    SrcLinear(rs->in_buf, rs->out_buf, rs->factor,
+			      &rs->time, (unsigned short)num_in);
 
 		/* move time back num_in samples back */
-		data->time -= num_in;
-		data->in_buf_ptr += num_in;
+		rs->time -= num_in;
+		rs->in_buf_ptr += num_in;
 
 		/* remove time accumulation */
-		num_creep = (int)(data->time) - data->x_off;
+		num_creep = (int)(rs->time) - rs->x_off;
 		if (num_creep) {
-			data->time -= num_creep;
-			data->in_buf_ptr += num_creep;
+			rs->time -= num_creep;
+			rs->in_buf_ptr += num_creep;
 		}
 
 		/* copy input signal that needs to be reused */
 		num_reuse =
-		    data->in_buf_read - (data->in_buf_ptr -
-					 data->in_buf_offset);
+		    rs->in_buf_read - (rs->in_buf_ptr - rs->in_buf_offset);
 		for (i = 0; i < num_reuse; i++) {
-			data->in_buf[i] =
-			    data->
-			    in_buf[(data->in_buf_ptr - data->in_buf_offset) +
-				   i];
+			rs->in_buf[i] =
+			    rs->in_buf[(rs->in_buf_ptr - rs->in_buf_offset) +
+				       i];
 		}
-		data->in_buf_read = num_reuse;
-		data->in_buf_ptr = data->in_buf_offset;
+		rs->in_buf_read = num_reuse;
+		rs->in_buf_ptr = rs->in_buf_offset;
 
 		/* copy samples to output buffer */
-		data->out_buf_ptr = num_out;
-		if (data->out_buf_ptr && (out_buf_size - out_total_samples > 0)) {
+		rs->out_buf_ptr = num_out;
+		if (rs->out_buf_ptr && (out_buf_size - out_total_samples > 0)) {
 			len =
 			    MIN(out_buf_size - out_total_samples,
-				data->out_buf_ptr);
+				rs->out_buf_ptr);
 			for (i = 0; i < len; i++) {
-				out_buf[out_total_samples + i] =
-				    data->out_buf[i];
+				out_buf[out_total_samples + i] = rs->out_buf[i];
 			}
 			out_total_samples += len;
 			/* store uncopied output buffer */
-			for (i = 0; i < data->out_buf_ptr - len; i++) {
-				data->out_buf[i] = data->out_buf[len + i];
+			for (i = 0; i < rs->out_buf_ptr - len; i++) {
+				rs->out_buf[i] = rs->out_buf[len + i];
 			}
-			data->out_buf_ptr -= len;
+			rs->out_buf_ptr -= len;
 		}
-		if (data->out_buf_ptr) {
+		if (rs->out_buf_ptr) {
 			break;
 		}
 	}
@@ -219,12 +215,12 @@ resample(struct rs_data *data, short *in_buf, int in_buf_size, short *out_buf,
 	return out_total_samples;
 }
 
-void resample_close(struct rs_data *data)
+void resample_close(struct rs_data *rs)
 {
-	if (data) {
-		free(data->in_buf);
-		free(data->out_buf);
-		free(data);
-		data = NULL;
+	if (rs) {
+		free(rs->in_buf);
+		free(rs->out_buf);
+		free(rs);
+		rs = NULL;
 	}
 }

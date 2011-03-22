@@ -69,6 +69,7 @@ struct rs_data {
 
 struct rs_data *resample_init(int in_rate, int out_rate);
 
-int resample(struct rs_data *data, short *in_buf, int num_samples);
+int resample(struct rs_data *rs, short *in_buf, int in_buf_size, short *out_buf,
+	     int out_buf_size);
 
-void resample_close(struct rs_data *data);
+void resample_close(struct rs_data *rs);
