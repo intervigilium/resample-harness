@@ -50,25 +50,24 @@ static int SrcLinear(short X[], short Y[], double factor, unsigned int *Time,
 	short *Xp, *Ystart;
 	int v, x1, x2;
 
-	double dt;		/* Step through input signal */
-	unsigned int dtb;	/* Fixed-point version of Dt */
-	unsigned int endTime;	/* When Time reaches EndTime, return to user */
+	unsigned int dt;	/* Step through input signal */
+	unsigned int endTime;
 
-	dt = 1.0 / factor;	/* Output sampling period */
-	dtb = dt * (1 << Np) + 0.5;	/* Fixed-point representation */
+	factor = 1.0 / factor;
+	dt = factor * (32768) + 0.5;	/* Output sampling period */
 
 	Ystart = Y;
-	endTime = *Time + (1 << Np) * (int)Nx;
+	endTime = *Time + (32768) * (int)Nx;
 	while (*Time < endTime) {
-		iconst = (*Time) & Pmask;
-		Xp = &X[(*Time) >> Np];	/* Ptr to current input sample */
+		iconst = (*Time) & Pmask;	/* mask off lower 16 bits of time */
+		Xp = &X[(*Time) >> 15];	/* Ptr to current input sample is top 16 bits */
 		x1 = *Xp++;
 		x2 = *Xp;
-		x1 *= ((1 << Np) - iconst);
+		x1 *= 32768 - iconst;
 		x2 *= iconst;
 		v = x1 + x2;
-		*Y++ = WordToHword(v, Np);	/* Deposit output */
-		*Time += dtb;	/* Move to next sample by time increment */
+		*Y++ = WordToHword(v, 15);	/* Deposit output */
+		*Time += dt;	/* Move to next sample by time increment */
 	}
 	return (Y - Ystart);	/* Return number of output samples */
 }
@@ -89,7 +88,7 @@ struct rs_data *resample_init(int in_rate, int out_rate)
 	rs->in_buf_offset = 10;
 	rs->in_buf_ptr = rs->in_buf_offset;
 	rs->in_buf_read = rs->in_buf_offset;
-	rs->time = (rs->in_buf_offset << Np);
+	rs->time = (rs->in_buf_offset << 15);
 
 	rs->in_buf_size = IBUFFSIZE;
 	rs->out_buf_size =
@@ -110,9 +109,8 @@ int
 resample(struct rs_data *rs, short *in_buf, int in_buf_size, short *out_buf,
 	 int out_buf_size, int last)
 {
-	int i, len;
-	int num_in, num_out, num_creep, num_reuse;
-	int out_total_samples;
+	int i, len, num_reuse, out_total_samples, num_in;
+	unsigned short num_creep, num_out;
 
 	if (!rs) {
 		return -1;
@@ -121,8 +119,8 @@ resample(struct rs_data *rs, short *in_buf, int in_buf_size, short *out_buf,
 	rs->in_buf_used = 0;
 	out_total_samples = 0;
 
-	if (rs->out_buf_ptr && (out_buf_size - out_total_samples > 0)) {
-		len = MIN(out_buf_size - out_total_samples, rs->out_buf_ptr);
+	if (rs->out_buf_ptr) {
+		len = MIN(out_buf_size, rs->out_buf_ptr);
 		/* copy leftover samples to the output */
 		for (i = 0; i < len; i++) {
 			out_buf[out_total_samples + i] = rs->out_buf[i];
@@ -132,6 +130,7 @@ resample(struct rs_data *rs, short *in_buf, int in_buf_size, short *out_buf,
 		for (i = 0; i < rs->out_buf_ptr - len; i++) {
 			rs->out_buf[i] = rs->out_buf[len + i];
 		}
+		rs->out_buf_ptr -= len;
 
 		return out_total_samples;
 	}
@@ -166,16 +165,16 @@ resample(struct rs_data *rs, short *in_buf, int in_buf_size, short *out_buf,
 		/* do linear interpolation */
 		num_out =
 		    SrcLinear(rs->in_buf, rs->out_buf, rs->factor,
-			      &rs->time, (unsigned short)num_in);
+			      &rs->time, num_in);
 
 		/* move time back num_in samples back */
-		rs->time -= num_in;
+		rs->time -= (num_in << 15);
 		rs->in_buf_ptr += num_in;
 
 		/* remove time accumulation */
-		num_creep = (int)(rs->time) - rs->in_buf_offset;
+		num_creep = (rs->time >> 15) - rs->in_buf_offset;
 		if (num_creep) {
-			rs->time -= num_creep;
+			rs->time -= (num_creep << 15);
 			rs->in_buf_ptr += num_creep;
 		}
 

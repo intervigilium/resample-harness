@@ -7,12 +7,13 @@
 #include <sndfile.h>
 #include "resample.h"
 
-#define BUF_SIZE 1024
+#define BUF_SIZE 2048
 
 int main(int argc, char **argv)
 {
 	SNDFILE *ifp, *ofp;
 	SF_INFO *if_info, *of_info;
+	struct rs_data *rs;
 
 	if (argc != 4) {
 		printf
@@ -39,21 +40,24 @@ int main(int argc, char **argv)
 		}
 
 		sf_count_t samples_written = 0;
-		sf_count_t samples_read = 0;
+		sf_count_t samples_read = 1;
+		sf_count_t samples_resampled = 0;
 		short *inbuf = calloc(BUF_SIZE, sizeof(short));
 		short *outbuf = calloc(BUF_SIZE, sizeof(short));
 
+		rs = resample_init(if_info->samplerate, out_srate);
 		do {
 			samples_read = sf_read_short(ifp, inbuf, BUF_SIZE);
 			if (samples_read > 0) {
-				samples_read =
-				    resample(inbuf, NULL, if_info->samplerate,
-					     outbuf, NULL, out_srate,
-					     samples_read, 1);
+				samples_resampled =
+				    resample(rs, inbuf, samples_read,
+					     outbuf, samples_read, 0);
 				samples_written =
-				    sf_write_short(ofp, outbuf, samples_read);
+				    sf_write_short(ofp, outbuf,
+						   samples_resampled);
 			}
 		} while (samples_read > 0);
+		resample_close(rs);
 
 		free(inbuf);
 		free(outbuf);
