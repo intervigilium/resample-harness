@@ -59,14 +59,14 @@ static int SrcLinear(short X[], short Y[], double factor, unsigned int *Time,
 	Ystart = Y;
 	endTime = *Time + (32768) * (int)Nx;
 	while (*Time < endTime) {
-		iconst = (*Time) & Pmask;	/* mask off lower 16 bits of time */
-		Xp = &X[(*Time) >> 15];	/* Ptr to current input sample is top 16 bits */
+		iconst = (*Time) & FP_MASK;	/* mask off lower 16 bits of time */
+		Xp = &X[(*Time) >> FP_FACTOR];	/* Ptr to current input sample is top 16 bits */
 		x1 = *Xp++;
 		x2 = *Xp;
 		x1 *= 32768 - iconst;
 		x2 *= iconst;
 		v = x1 + x2;
-		*Y++ = WordToHword(v, 15);	/* Deposit output */
+		*Y++ = WordToHword(v, FP_FACTOR);	/* Deposit output */
 		*Time += dt;	/* Move to next sample by time increment */
 	}
 	return (Y - Ystart);	/* Return number of output samples */
@@ -88,7 +88,7 @@ struct rs_data *resample_init(int in_rate, int out_rate)
 	rs->in_buf_offset = 10;
 	rs->in_buf_ptr = rs->in_buf_offset;
 	rs->in_buf_read = rs->in_buf_offset;
-	rs->time = (rs->in_buf_offset << 15);
+	rs->time = (rs->in_buf_offset << FP_FACTOR);
 
 	rs->in_buf_size = IBUFFSIZE;
 	rs->out_buf_size =
@@ -168,13 +168,13 @@ resample(struct rs_data *rs, short *in_buf, int in_buf_size, short *out_buf,
 			      &rs->time, num_in);
 
 		/* move time back num_in samples back */
-		rs->time -= (num_in << 15);
+		rs->time -= (num_in << FP_FACTOR);
 		rs->in_buf_ptr += num_in;
 
 		/* remove time accumulation */
-		num_creep = (rs->time >> 15) - rs->in_buf_offset;
+		num_creep = (rs->time >> FP_FACTOR) - rs->in_buf_offset;
 		if (num_creep) {
-			rs->time -= (num_creep << 15);
+			rs->time -= (num_creep << FP_FACTOR);
 			rs->in_buf_ptr += num_creep;
 		}
 
