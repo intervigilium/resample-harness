@@ -36,6 +36,7 @@
 
 struct rs_data {
 	double factor;
+	/* time is 32-bit fixed-point using 2^FP_FACTOR as factor */
 	unsigned int time;
 	unsigned short in_buf_ptr;
 	unsigned short out_buf_ptr;

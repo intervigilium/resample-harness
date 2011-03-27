@@ -109,7 +109,11 @@ int
 resample(struct rs_data *rs, short *in_buf, int in_buf_size, short *out_buf,
 	 int out_buf_size, int last)
 {
-	int i, len, num_reuse, out_total_samples, num_in;
+	int i, len;
+	/* used to track samples from previous buffer
+	 * must remain signed! */
+	int num_in;
+	int num_reuse, out_total_samples;
 	unsigned short num_creep, num_out;
 
 	if (!rs) {
