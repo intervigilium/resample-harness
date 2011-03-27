@@ -48,10 +48,11 @@ int main(int argc, char **argv)
 		rs = resample_init(if_info->samplerate, out_srate);
 		do {
 			samples_read = sf_read_short(ifp, inbuf, BUF_SIZE);
+			int last = samples_read != BUF_SIZE;
 			if (samples_read > 0) {
 				samples_resampled =
 				    resample(rs, inbuf, samples_read,
-					     outbuf, samples_read, 0);
+					     outbuf, samples_read, last);
 				samples_written =
 				    sf_write_short(ofp, outbuf,
 						   samples_resampled);
