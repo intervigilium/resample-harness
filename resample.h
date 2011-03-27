@@ -38,10 +38,10 @@ struct rs_data {
 	double factor;
 	/* time is 32-bit fixed-point using 2^FP_FACTOR as factor */
 	unsigned int time;
-	unsigned short in_buf_ptr;
-	unsigned short out_buf_ptr;
-	unsigned short in_buf_read;
-	unsigned short in_buf_offset;
+	int in_buf_ptr;
+	int out_buf_ptr;
+	int in_buf_read;
+	int in_buf_offset;
 	int in_buf_used;
 	int in_buf_size;
 	int out_buf_size;

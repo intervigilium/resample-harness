@@ -110,11 +110,11 @@ resample(struct rs_data *rs, short *in_buf, int in_buf_size, short *out_buf,
 	 int out_buf_size, int last)
 {
 	int i, len;
-	/* used to track samples from previous buffer
-	 * must remain signed! */
-	int num_in;
-	int num_reuse, out_total_samples;
-	unsigned short num_creep, num_out;
+	int num_in;		/* number of samples from previous buffer */
+	int num_out;		/* number of samples resampled by SrcLinear */
+	int num_reuse;		/* number of samples to re-use in next buffer */
+	int num_creep;		/* number of samples of time accumulation */
+	int out_total_samples;
 
 	if (!rs) {
 		return -1;
